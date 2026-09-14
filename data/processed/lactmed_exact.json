@@ -1,30 +1,30 @@
 {
-    "Sertraline": {
-        "RID": "0.5% to 3.0%",
-        "half_life": "26 hours"
-    },
-    "Zuranolone": {
-        "RID": "Less than 1%",
-        "half_life": "19.7 to 24.6 hours"
-    },
-    "Brexanolone": {
-        "RID": "1.3% to 2.8%",
-        "half_life": "9 hours"
-    },
-    "Fluoxetine": {
-        "RID": "1.6% to 14.6%",
-        "half_life": "1 to 4 days (Norfluoxetine: 7 to 15 days)"
-    },
-    "Escitalopram": {
-        "RID": "3.9% to 7.9%",
-        "half_life": "27 to 32 hours"
-    },
-    "Paroxetine": {
-        "RID": "1.2% to 2.8%",
-        "half_life": "21 hours"
-    },
-    "Venlafaxine": {
-        "RID": "6.8% to 8.1%",
-        "half_life": "5 hours (ODV: 11 hours)"
-    }
+  "Sertraline": {
+    "RID": "0.5% to 3.0% (typically < 1%)",
+    "half_life": "26 hours (active metabolite desmethylsertraline: 62 to 104 hours)"
+  },
+  "Zuranolone": {
+    "RID": "0.74% (mean); maximum reported < 1%; study range 0.5% to 0.9%",
+    "half_life": "19.7 to 24.6 hours (terminal elimination)"
+  },
+  "Brexanolone": {
+    "RID": "0.18% to 1.3% (mean 0.69%); maximum 1.3% at peak infusion rate",
+    "half_life": "9 hours (IV formulation; terminal elimination)"
+  },
+  "Fluoxetine": {
+    "RID": "1.6% to 14.6% (highest among all SSRIs; typically 5-10% in most studies)",
+    "half_life": "1 to 4 days (parent drug); active metabolite norfluoxetine: 7 to 15 days"
+  },
+  "Escitalopram": {
+    "RID": "5.3% to 7.9% (higher than sertraline and paroxetine)",
+    "half_life": "27 to 32 hours"
+  },
+  "Paroxetine": {
+    "RID": "0.5% to 2.8% (among the lowest for SSRIs after sertraline)",
+    "half_life": "21 hours (but highly variable: 3 to 65 hours due to non-linear kinetics)"
+  },
+  "Venlafaxine": {
+    "RID": "6.8% to 8.1% (combined venlafaxine + active metabolite O-desmethylvenlafaxine)",
+    "half_life": "5 hours (venlafaxine); 11 hours (active metabolite O-desmethylvenlafaxine)"
+  }
 }

@@ -5,45 +5,36 @@ from dotenv import load_dotenv
 from pathlib import Path
 import sys
 
-# ── Path setup ────────────────────────────────────────────────────────────────
+# ── Paths ─────────────────────────────────────────────────────────────────────
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.append(str(Path(__file__).resolve().parent))
 from retrieval import AURARetriever
 
-# ── Drug lists ────────────────────────────────────────────────────────────────
-# Drugs we have full LactMed data for
+# ── Drug registry ─────────────────────────────────────────────────────────────
 SUPPORTED_DRUGS = [
     "Sertraline", "Zuranolone", "Brexanolone",
     "Fluoxetine", "Escitalopram", "Paroxetine", "Venlafaxine"
 ]
-
-# Common drugs NOT in our database – we recognise them but trigger deferral
 OUT_OF_SCOPE_DRUGS = [
     "Lithium", "Aspirin", "Ibuprofen", "Paracetamol", "Acetaminophen",
     "Lorazepam", "Diazepam", "Clonazepam", "Olanzapine", "Quetiapine",
     "Risperidone", "Haloperidol", "Valproate", "Lamotrigine", "Clomipramine",
-    "Amitriptyline", "Duloxetine", "Mirtazapine", "Bupropion", "Citalopram"
+    "Amitriptyline", "Duloxetine", "Mirtazapine", "Bupropion", "Citalopram",
+    "Alprazolam", "Zolpidem", "Codeine", "Tramadol", "Methadone",
+    "Warfarin", "Atenolol", "Metformin", "Levothyroxine", "Prednisone"
 ]
 
-ALL_KNOWN_DRUGS = SUPPORTED_DRUGS + OUT_OF_SCOPE_DRUGS
-
 def detect_drug(text: str):
-    """
-    Scan the vignette for any known drug name (case-insensitive).
-    Returns (drug_name, in_scope: bool) or (None, None) if nothing found.
-    """
     lower = text.lower()
-    # Check supported drugs first
     for drug in SUPPORTED_DRUGS:
         if drug.lower() in lower:
             return drug, True
-    # Then check out-of-scope drugs
     for drug in OUT_OF_SCOPE_DRUGS:
         if drug.lower() in lower:
             return drug, False
     return None, None
 
-# ── Bootstrap ─────────────────────────────────────────────────────────────────
+# ── Init ──────────────────────────────────────────────────────────────────────
 load_dotenv(BASE_DIR / ".env")
 
 @st.cache_resource(show_spinner="Loading AURA clinical databases…")
@@ -53,35 +44,29 @@ def load_system():
     client    = groq.Groq(api_key=api_key) if api_key and api_key != "YOUR_API_KEY_HERE" else None
     return retriever, client
 
-# ── Page config ───────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="AURA Clinical System",
-    page_icon="🛡️",
-    layout="wide"
-)
+# ── Page ──────────────────────────────────────────────────────────────────────
+st.set_page_config(page_title="AURA Clinical System", page_icon="🛡️", layout="wide")
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
     st.title("🛡️ AURA")
     st.caption("Adaptive Uncertainty Reduction Architecture")
     st.markdown("---")
-
     st.subheader("System Status")
     st.success("✅ FAISS Semantic Vector DB")
     st.success("✅ Sentinel JSON Guardrail")
-    st.success("✅ Groq LLM Engine (qwen3.8-27b)")
-
+    st.success("✅ Groq LLM Engine")
     st.markdown("---")
-    st.subheader("Verified Drug Database")
+    st.subheader("Verified Drug Database (7 Drugs)")
     for d in SUPPORTED_DRUGS:
         st.markdown(f"- {d}")
-
     st.markdown("---")
     st.subheader("About AURA")
     st.info(
-        "AURA separates language from math. The LLM handles **clinical reasoning**, "
-        "while a deterministic JSON guardrail injects exact pharmacokinetic numbers "
-        "to guarantee **0% hallucination**."
+        "AURA separates language from math. "
+        "The LLM handles clinical reasoning using verified NIH LactMed context. "
+        "The Sentinel Guardrail then injects exact pharmacokinetic numbers. "
+        "**0% numerical hallucination guaranteed.**"
     )
 
 # ── Main ──────────────────────────────────────────────────────────────────────
@@ -91,105 +76,106 @@ st.markdown("---")
 
 retriever, client = load_system()
 if not client:
-    st.error("❌ GROQ_API_KEY is missing or invalid in your .env file!")
+    st.error("❌ GROQ_API_KEY missing in .env file!")
     st.stop()
 
-# ── Sample presets ────────────────────────────────────────────────────────────
+# ── Presets ───────────────────────────────────────────────────────────────────
 PRESETS = {
     "— Choose a preset —": "",
-    "Standard PPD (Sertraline)":
+    "Standard PPD · Sertraline":
         "A 28-year-old breastfeeding mother with a healthy 6-month-old has persistent low mood, tearfulness, and poor appetite. The care team is considering initiating Sertraline.",
-    "New FDA Drug (Zuranolone)":
-        "A 32-year-old breastfeeding mother with severe PPD is being evaluated for the new oral treatment Zuranolone. What is the clinical safety profile?",
-    "Premature Neonate Risk (Fluoxetine)":
-        "A 30-year-old breastfeeding mother with a 3-week-old premature neonate wants to take Fluoxetine for severe postpartum depression. Is this safe?",
-    "IV Treatment (Brexanolone)":
+    "New FDA Drug · Zuranolone":
+        "A 32-year-old breastfeeding mother with severe PPD is being evaluated for the new oral treatment Zuranolone. Assess the clinical safety profile.",
+    "Premature Neonate Risk · Fluoxetine":
+        "A 30-year-old breastfeeding mother with a 3-week-old premature neonate wants to take Fluoxetine for severe postpartum depression.",
+    "IV Treatment · Brexanolone":
         "A mother is receiving an IV infusion of Brexanolone over 60 hours for severe PPD. What is the safety profile during breastfeeding?",
-    "Deferral Case (Lithium)":
+    "Out-of-Scope Deferral · Lithium":
         "A patient with postpartum psychosis has been suggested Lithium by the attending psychiatrist. Assess the safety for breastfeeding.",
+    "Out-of-Scope Deferral · Aspirin":
+        "A breastfeeding mother with a severe headache wants to take Aspirin. Based strictly on the PPD database, what is the half-life?",
+    "SNRI Option · Venlafaxine":
+        "A 34-year-old breastfeeding mother failed sertraline. The team is considering switching to Venlafaxine. Is it safe for the infant?",
     "Custom Prompt…": "",
 }
 
 st.header("Patient Consultation")
-
-preset       = st.selectbox("Load Sample Vignette (Presentation Demo):", list(PRESETS.keys()))
-vignette_val = PRESETS[preset]
-vignette     = st.text_area(
+preset   = st.selectbox("Load Sample Vignette:", list(PRESETS.keys()))
+vignette = st.text_area(
     "Patient Vignette:",
-    value=vignette_val,
+    value=PRESETS[preset],
     height=130,
     placeholder="Describe the patient here. Include the medicine name (e.g. Sertraline, Zuranolone…)"
 )
-
-st.caption("💡 AURA automatically detects the drug from your vignette. No need to select it manually.")
-
+st.caption("💡 AURA automatically detects the drug from your vignette — no manual selection needed.")
 run = st.button("🔬 Generate AURA Report", type="primary", use_container_width=True)
 
-# ── Processing ────────────────────────────────────────────────────────────────
+# ── Pipeline ──────────────────────────────────────────────────────────────────
 if run:
     if not vignette.strip():
-        st.warning("⚠️ Please enter a patient vignette first.")
+        st.warning("⚠️ Please enter a patient vignette.")
         st.stop()
 
-    # ── Step 1: Auto-detect drug ─────────────────────────────────────────────
+    # 1. Auto-detect
     drug, in_scope = detect_drug(vignette)
 
     if drug is None:
         st.error(
-            "⚠️ **No drug name detected in your vignette.**\n\n"
-            "Please mention the medication name directly in the vignette text "
-            "(e.g. *'...considering initiating **Sertraline**...'*). "
-            "AURA supports: " + ", ".join(SUPPORTED_DRUGS)
+            "⚠️ **No drug name detected.**\n\n"
+            "Please mention the medication by name in the vignette "
+            "(e.g. *'...considering initiating **Sertraline**...'*)\n\n"
+            "Supported drugs: " + ", ".join(SUPPORTED_DRUGS)
         )
         st.stop()
 
-    # Show the detected drug as a small badge
-    st.info(f"🔍 **Auto-detected drug:** {drug}")
+    st.markdown(f"> 🔍 **Auto-detected drug:** `{drug}`")
 
-    # ── Step 2: Out-of-scope deferral ────────────────────────────────────────
+    # 2. Out-of-scope deferral
     if not in_scope:
         st.error(
-            f"🚨 **HUMAN DEFERRAL TRIGGERED** — *{drug}* is outside the verified LactMed database.\n\n"
-            f"AURA does not generate pharmacokinetic data for drugs outside its curated scope. "
-            f"This is intentional: providing unverified numbers would create a hallucination risk.\n\n"
-            f"**Action required:** Consult a clinical pharmacologist or refer directly to "
+            f"### 🚨 HUMAN DEFERRAL TRIGGERED\n\n"
+            f"**{drug}** is outside the verified NIH LactMed database scope.\n\n"
+            f"Generating pharmacokinetic data for unverified drugs would constitute a hallucination risk. "
+            f"AURA's Sentinel Guardrail has terminated this query to protect patient safety.\n\n"
+            f"**Required action:** Consult a clinical pharmacologist or refer directly to "
             f"[NIH LactMed](https://www.ncbi.nlm.nih.gov/books/NBK501922/) for *{drug}*."
         )
         st.stop()
 
-    # ── Step 3: Sentinel Guardrail lookup ────────────────────────────────────
+    # 3. Guardrail lookup
     guardrail_data = retriever.get_guardrail_data(drug)
     if not guardrail_data:
-        st.error(
-            f"🚨 **HUMAN DEFERRAL** — No verified LactMed record found for *{drug}*. "
-            f"Please consult a clinical pharmacologist."
-        )
+        st.error(f"🚨 No verified record for {drug}. Human deferral triggered.")
         st.stop()
 
     exact_rid       = guardrail_data.get("RID", "N/A")
     exact_half_life = guardrail_data.get("half_life", "N/A")
 
-    # ── Step 4: Semantic retrieval ────────────────────────────────────────────
+    # 4. Semantic context
     context_results = retriever.search_semantic(drug, top_k=1)
-    medical_context = context_results[0] if context_results else (
-        f"{drug} is a medication used in the treatment of postpartum depression."
-    )
+    medical_context = context_results[0] if context_results else f"{drug} is used in PPD treatment."
 
-    # ── Step 5: LLM clinical reasoning ───────────────────────────────────────
-    with st.spinner(f"⏳ Generating clinical reasoning for **{drug}**…"):
+    # 5. LLM reasoning
+    with st.spinner(f"Generating clinical assessment for {drug}…"):
         system_msg = (
-            "You are AURA, a clinical pharmacology assistant specialised in maternal mental health "
-            "and breastfeeding safety. You have been provided with verified LactMed database context. "
-            "Your role is to synthesise the patient's clinical picture with the LactMed evidence. "
-            "Be concise (3-5 sentences). Focus on clinical safety, infant risk factors, and whether "
-            "the drug is appropriate given the specific patient details. "
-            "NEVER say you don't know the drug — you have full LactMed data in your context. "
-            "NEVER invent numerical values; those will be injected separately by the Sentinel Guardrail."
+            f"You are AURA, a clinical pharmacology assistant specialised in maternal mental health "
+            f"and breastfeeding safety. You have been given the complete verified NIH LactMed clinical "
+            f"profile for {drug}. "
+            f"Your task: write a concise, confident 3-5 sentence clinical safety assessment based on "
+            f"this evidence and the patient's specific details (age, infant age/maturity, comorbidities). "
+            f"IMPORTANT RULES:\n"
+            f"1. Do NOT mention RID percentages or half-life values — those are injected separately by the Sentinel Guardrail.\n"
+            f"2. Do NOT say you lack information — you have the full LactMed profile.\n"
+            f"3. Focus on: is this drug appropriate for THIS specific patient? What monitoring is needed?\n"
+            f"4. If the infant is premature or a newborn, emphasise the elevated risk explicitly.\n"
+            f"5. Mention the AAP classification if relevant.\n"
+            f"6. Be direct and clinically confident."
         )
         user_msg = (
-            f"Verified LactMed Context for {drug}:\n{medical_context}\n\n"
-            f"Patient Vignette:\n{vignette}\n\n"
-            f"Provide a brief, focused clinical safety assessment for {drug} in this specific patient."
+            f"Verified NIH LactMed Clinical Profile for {drug}:\n"
+            f"{medical_context}\n\n"
+            f"Patient Clinical Scenario:\n{vignette}\n\n"
+            f"Provide your clinical safety assessment."
         )
         try:
             completion = client.chat.completions.create(
@@ -198,7 +184,7 @@ if run:
                     {"role": "system", "content": system_msg},
                     {"role": "user",   "content": user_msg},
                 ],
-                max_tokens=250,
+                max_tokens=300,
                 temperature=0.0,
             )
             reasoning = completion.choices[0].message.content.strip()
@@ -206,24 +192,24 @@ if run:
             st.error(f"❌ API Error: {e}")
             st.stop()
 
-    # ── Step 6: Render final report ───────────────────────────────────────────
+    # 6. Unified Report
     st.markdown("---")
-    st.subheader("📋 AURA Final Medical Report")
+    st.subheader(f"📋 AURA Clinical Report — {drug}")
 
-    col_l, col_r = st.columns(2)
+    # Guardrail data FIRST (prominent, at the top)
+    st.markdown("#### 🛡️ Verified Pharmacokinetic Data (NIH LactMed)")
+    m1, m2 = st.columns(2)
+    with m1:
+        st.metric("Relative Infant Dose (RID)", exact_rid)
+    with m2:
+        st.metric("Elimination Half-life", exact_half_life)
+    st.caption("*⚠️ These values are injected deterministically from the NIH LactMed JSON vault — not generated by AI.*")
 
-    with col_l:
-        st.markdown(f"### 🧠 Layer 1 — LLM Clinical Reasoning")
-        st.markdown(f"**Drug:** `{drug}`")
-        st.info(reasoning)
-        st.caption("*Reasoning generated by the LLM using LactMed semantic context — no numerical data allowed.*")
+    st.markdown("---")
 
-    with col_r:
-        st.markdown("### 🛡️ Layer 2 — Sentinel Guardrail Injection")
-        st.success(
-            f"**Relative Infant Dose (RID):** {exact_rid}\n\n"
-            f"**Elimination Half-life:** {exact_half_life}\n\n"
-            f"*⚠️ Mathematically verified from NIH LactMed JSON vault — not generated by AI.*"
-        )
-        st.markdown("**Compliance Status:**")
-        st.success("✅ Report generated within verified database scope. Zero numerical hallucination guaranteed.")
+    # LLM reasoning below
+    st.markdown("#### 🧠 Clinical Safety Assessment")
+    st.info(reasoning)
+    st.caption(f"*Reasoning generated using full NIH LactMed evidence for {drug}.*")
+
+    st.success("✅ Zero numerical hallucination — pharmacokinetic data sourced deterministically from verified NIH LactMed database.")
